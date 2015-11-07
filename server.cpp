@@ -69,32 +69,34 @@ int main(int argc, char const *argv[]) {
 
     	struct sockaddr_storage conn_addr;
 		socklen_t addr_size = sizeof(conn_addr);
-		int conn_fd = accept(sockfd, (struct sockaddr *)&conn_addr, &addr_size);
-		if (conn_fd == -1) {
-			fprintf(stderr, "accept error%d\n", errno);
-			exit(1);
-		}
+		while (true) {
+			int conn_fd = accept(sockfd, (struct sockaddr *)&conn_addr, &addr_size);
+			if (conn_fd == -1) {
+				fprintf(stderr, "accept error%d\n", errno);
+				exit(1);
+			}
 
-		std::vector<char> buffer;
-		char* buf = 0;
+			std::vector<char> buffer;
+			char buf[4096];
 
-		// read all data from socket
-		int read_bytes;
-		while ((read_bytes = read(conn_fd, buf, sizeof(buffer))) > 0) {
-		    buffer.insert(buffer.end(), buf, buf + read_bytes);
-		}
+			// read all data from socket
+			int read_bytes;
+			while ((read_bytes = read(conn_fd, buf, sizeof(buffer))) > 0) {
+			    buffer.insert(buffer.end(), buf, buf + read_bytes);
+			}
 
-		// write all data to socket
-		int write_bytes;
-		char* data = buffer.data();
-		int bytes_to_write = buffer.size();
-		while ((write_bytes = write(conn_fd, data, bytes_to_write)) > 0) {
-		    data += write_bytes;
-		    bytes_to_write -= write_bytes;
-		}
+			// write all data to socket
+			int write_bytes;
+			char* data = buffer.data();
+			int bytes_to_write = buffer.size();
+			while ((write_bytes = write(conn_fd, data, bytes_to_write)) > 0) {
+			    data += write_bytes;
+			    bytes_to_write -= write_bytes;
+			}
 
-		if (bytes_to_write > 0) {  // not all written, probably socket on the other side closed early
-		    std::cout << "Socket closed early";
+			if (bytes_to_write > 0) {  // not all written, probably socket on the other side closed early
+			    std::cout << "Socket closed early";
+			}
 		}
 
     	freeaddrinfo(servinfo);
