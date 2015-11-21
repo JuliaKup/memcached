@@ -74,3 +74,4 @@ public:
 private:
     std::string* string_;
 };
+

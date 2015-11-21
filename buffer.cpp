@@ -105,3 +105,4 @@ void StringWBuffer::Flush() {
     string_->append(buffer_.begin(), buffer_.begin() + pos_);
     pos_ = 0;
 }
+

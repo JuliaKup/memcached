@@ -19,7 +19,7 @@ TEST(Protocol, McCommandDeserializeSet) {
     setCommand.Deserialize(&buffer);
 
     ASSERT_EQ(setCommand.command, CMD_SET);
-    ASSERT_EQ(setCommand.key, "user_123");
+    ASSERT_EQ(setCommand.keys[0], "user_123");
     ASSERT_EQ(setCommand.flags, 888);
     ASSERT_EQ(setCommand.exp_time, 1445128601);
     ASSERT_EQ(setCommand.data, std::vector<char>({'n', 'a', 'n', 'a', 'n', 'a', 'n', 'a', 'n', 'a'}));
@@ -36,11 +36,23 @@ TEST(Protocol, McCommandDeserializeAdd) {
 
 TEST(Protocol, McCommandDeserializeGet) {
     McCommand getCommand;
-    std::string input = "get user_123 888 1445128601 10\r\nnanananana\r\n";
+    std::string input = "get user_123\r\n";
     StringRBuffer buffer(8, input);
     getCommand.Deserialize(&buffer);
 
     ASSERT_EQ(getCommand.command, CMD_GET);
+    ASSERT_EQ(getCommand.keys[0], "user_123");
+}
+
+TEST(Protocol, McCommandDeserializeGetMultipleKeys) {
+    McCommand getCommand;
+    std::string input = "get user_123 user_789\r\n";
+    StringRBuffer buffer(8, input);
+    getCommand.Deserialize(&buffer);
+
+    ASSERT_EQ(getCommand.command, CMD_GET);
+    ASSERT_EQ(getCommand.keys[0], "user_123");
+    ASSERT_EQ(getCommand.keys[1], "user_789");
 }
 
 TEST(Protocol, McCommandDeserializeDelete) {
@@ -105,6 +117,6 @@ TEST(Protocol, McResultSerialize) {
         valResult.Serialize(&buffer);
         buffer.Flush();
 
-        ASSERT_EQ(result, "user_123 1445128601 6\r\n12345a\r\nuser_876 1446128601 6\r\n67890z\r\nEND\r\n");
+        ASSERT_EQ("VALUE user_123 1445128601 6\r\n12345a\r\nVALUE user_876 1446128601 6\r\n67890z\r\nEND\r\n", result);
     }
 }
