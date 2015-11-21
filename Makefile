@@ -5,7 +5,7 @@ CXXWARN=-Wall
 CXXFLAGS=-O0 -g -std=c++11 -fno-omit-frame-pointer
 CXXFLAGS+=-I. -isystem ./contrib/
 LDFLAGS=-g
-LDLIBS=-lpthread -lglog
+LDLIBS=-lpthread
 
 GTEST_OBJS=contrib/gmock-gtest-all.o contrib/gmock_main.o
 UT_OBJS=$(patsubst %.cpp,%.o,$(wildcard ut/*_ut.cpp))
