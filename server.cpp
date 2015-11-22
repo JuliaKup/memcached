@@ -103,9 +103,9 @@ void McServer::ProcessConnection(int fd) {
 }
 
 int main(int argc, char const *argv[]) {
-	//char port; 
-	//std::cin >> port;
-	McServer ms("3249");
+	char port; 
+	std::cin >> port;
+	McServer ms("54322");
 	ms.Run();
 	return 0;
 }
