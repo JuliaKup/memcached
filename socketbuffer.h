@@ -28,3 +28,4 @@ class SocketWBuffer : public WBuffer {
  protected:
  	int fd;
 };
+

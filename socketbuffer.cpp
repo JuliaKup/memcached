@@ -2,6 +2,7 @@
 #include "buffer.h"
 #include <algorithm>
 #include <iostream>
+#include <unistd.h>
 
 SocketRBuffer::SocketRBuffer(int fd_value, size_t buffer_size_value):
 	RBuffer(buffer_size_value), fd(fd_value) {

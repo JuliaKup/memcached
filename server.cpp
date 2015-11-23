@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <vector>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -52,6 +53,8 @@ class Server {
 
 			ProcessConnection(sockfd);
 		}
+
+		freeaddrinfo(servinfo);
 	}
 
 
@@ -71,9 +74,8 @@ void McServer::ProcessConnection(int fd) {
 	SocketRBuffer srb(fd, 4096);
 	SocketWBuffer swb(fd, 4096);
 
-	RBuffer *ptr = &srb;
 	McCommand cmd;
-	cmd.Deserialize(ptr);
+	cmd.Deserialize(&srb);
 
 	if (cmd.command == CMD_GET) {
 		std::string key("Forget your troubles");
@@ -100,12 +102,12 @@ void McServer::ProcessConnection(int fd) {
 		McResult mr(R_STORED);
 		mr.Serialize(&swb);
 	}
+
+	swb.Flush();
 }
 
 int main(int argc, char const *argv[]) {
-	char port; 
-	std::cin >> port;
-	McServer ms("54322");
+	McServer ms("4444");
 	ms.Run();
 	return 0;
 }

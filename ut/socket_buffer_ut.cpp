@@ -9,7 +9,6 @@
 TEST(SBuffer, ReadChar) {
 	int socks[2];
 	ASSERT_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, socks), 0);
-	//pipe(socks);
 
 	SocketRBuffer srb(socks[0], 5);
 
