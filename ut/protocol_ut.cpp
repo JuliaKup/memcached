@@ -57,7 +57,7 @@ TEST(Protocol, McCommandDeserializeGetMultipleKeys) {
 
 TEST(Protocol, McCommandDeserializeDelete) {
     McCommand deleteCommand;
-    std::string input = "delete user_123 888 1445128601 10\r\nnanananana\r\n";
+    std::string input = "delete user_123\r\n";
     StringRBuffer buffer(8, input);
     deleteCommand.Deserialize(&buffer);
 
@@ -117,6 +117,6 @@ TEST(Protocol, McResultSerialize) {
         valResult.Serialize(&buffer);
         buffer.Flush();
 
-        ASSERT_EQ("VALUE user_123 1445128601 6\r\n12345a\r\nVALUE user_876 1446128601 6\r\n67890z\r\nEND\r\n", result);
+        ASSERT_EQ(result, "VALUE user_123 1445128601 6\r\n12345a\r\nVALUE user_876 1446128601 6\r\n67890z\r\nEND\r\n");
     }
 }

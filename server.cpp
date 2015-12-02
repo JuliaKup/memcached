@@ -32,7 +32,10 @@ class Server {
  	}
 
  	void Run() {
+ 		int optval = 0;
+ 		setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
  		if (bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
+ 			perror("binderror");
     		fprintf(stderr, "bind error:%d\n", errno);
     		exit(1);
     	}
