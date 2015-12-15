@@ -50,12 +50,13 @@ class Server {
 
     	struct sockaddr_storage conn_addr;
 		socklen_t addr_size = sizeof(conn_addr);
-		int conn_fd = accept(sockfd, (struct sockaddr *)&conn_addr, &addr_size);
-		if (conn_fd == -1) {
-			fprintf(stderr, "accept error%d\n", errno);
-			exit(1);
-		}
+		
 		while (true) {
+			int conn_fd = accept(sockfd, (struct sockaddr *)&conn_addr, &addr_size);
+			if (conn_fd == -1) {
+				fprintf(stderr, "accept error%d\n", errno);
+				exit(1);
+			}
 			ProcessConnection(conn_fd);
 		}
 
