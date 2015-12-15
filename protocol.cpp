@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "socketbuffer.h"
 #include "protocol.h"
 #include <iostream>
 #include <stdexcept>
@@ -6,6 +7,7 @@
 #include <vector>
 
 MC_COMMAND CommandName2Code(std::string& param) {
+    std::cout << param << std::endl;
 	if (param == "add") {
 		return CMD_ADD;
 	} else if (param == "get") {
@@ -22,6 +24,7 @@ MC_COMMAND CommandName2Code(std::string& param) {
 
 void McCommand::Deserialize(RBuffer* buffer) {
     std::string cmd = buffer->ReadField(' '); // читает поле до пробельного символа
+    std::cout << cmd << std::endl;
     buffer->ReadChar();                       // Читает ' ', и сдвигает текущий символ
     command = CommandName2Code(cmd);
     if (command == CMD_GET) {

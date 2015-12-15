@@ -33,7 +33,10 @@ class Server {
 
  	void Run() {
  		int optval = 0;
- 		setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+ 		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+ 			perror("could not set SO_REUSEADDR");
+        	exit(EXIT_FAILURE);
+ 		}
  		if (bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
  			perror("binderror");
     		fprintf(stderr, "bind error:%d\n", errno);
@@ -47,14 +50,13 @@ class Server {
 
     	struct sockaddr_storage conn_addr;
 		socklen_t addr_size = sizeof(conn_addr);
+		int conn_fd = accept(sockfd, (struct sockaddr *)&conn_addr, &addr_size);
+		if (conn_fd == -1) {
+			fprintf(stderr, "accept error%d\n", errno);
+			exit(1);
+		}
 		while (true) {
-			int conn_fd = accept(sockfd, (struct sockaddr *)&conn_addr, &addr_size);
-			if (conn_fd == -1) {
-				fprintf(stderr, "accept error%d\n", errno);
-				exit(1);
-			}
-
-			ProcessConnection(sockfd);
+			ProcessConnection(conn_fd);
 		}
 
 		freeaddrinfo(servinfo);
@@ -89,6 +91,7 @@ void McServer::ProcessConnection(int fd) {
 		std::vector<McValue> vmv(1, mv);
 		McResult mr(vmv);
 		mr.Serialize(&swb);
+		std::cout << "Get DONE\n";
 	}
 
 	if (cmd.command == CMD_ADD) {
@@ -110,7 +113,7 @@ void McServer::ProcessConnection(int fd) {
 }
 
 int main(int argc, char const *argv[]) {
-	McServer ms("4444");
+	McServer ms(argv[1]);
 	ms.Run();
 	return 0;
 }

@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <iostream>
 
 #include "buffer.h"
 
@@ -6,6 +7,7 @@ char RBuffer::ReadChar() {
     if (pos_ == end_) {
         ReadMore();
     }
+    //std::cout << end_ << std::endl;
     return buffer_[pos_++];
 }
 
@@ -96,6 +98,7 @@ void StringRBuffer::ReadMore() {
     }
 
     int to_copy = std::min(std::distance(string_iter_, string_.end()), (long int) buffer_.size());
+
     std::copy(string_iter_, string_iter_ + to_copy, buffer_.begin());
     string_iter_ += to_copy;
     end_ = to_copy;
