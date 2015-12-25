@@ -10,12 +10,12 @@ TEST(SBuffer, ReadChar) {
 	int socks[2];
 	ASSERT_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, socks), 0);
 
-	SocketRBuffer srb(socks[0], 5);
-
 	std::vector<char> buf(5, 'a');
 	char *data = buf.data();
 
-	ASSERT_EQ(write(socks[1], data, 5), 5);
+	write(socks[1], data, 5);
+
+	SocketRBuffer srb(socks[0], 5);
 
 	ASSERT_EQ('a', srb.ReadChar());
 }
@@ -24,11 +24,13 @@ TEST(SBuffer, ReadUint32) {
 	int socks[2];
 	ASSERT_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, socks), 0);
 
-	SocketRBuffer srb(socks[0], 10);
 	std::vector<char> buf({'1', '2', '2', ',', '4', '5', '6', '7', ' '});
 	char *data = buf.data();
 
 	write(socks[1], data, 10);
+
+	SocketRBuffer srb(socks[0], 10);
+
 	ASSERT_EQ(122, srb.ReadUint32());
 	ASSERT_EQ(',', srb.ReadChar());
 	ASSERT_EQ(4567, srb.ReadUint32());
@@ -39,11 +41,13 @@ TEST(SBuffer, ReadField) {
 	int socks[2];
 	ASSERT_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, socks), 0);
 
-	SocketRBuffer srb(socks[0], 10);
 	std::vector<char> buf({'a', 'b', 'c', ',', 't', 'r', 'i', 'p', ' '});
 	char *data = buf.data();
 
 	write(socks[1], data, 10);
+
+	SocketRBuffer srb(socks[0], 10);
+
 	ASSERT_EQ("abc", srb.ReadField(','));
 	ASSERT_EQ(',', srb.ReadChar());
 	ASSERT_EQ("trip", srb.ReadField(' '));
@@ -74,7 +78,7 @@ TEST(SBuffer, WriteUint32) {
 	swb.Flush();
 
 	char c[32];
-	ASSERT_EQ(read(socks[1], c, sizeof(c)), sizeof(c));
+	read(socks[1], c, sizeof(c));
 	ASSERT_EQ('1', c[0]);
 	ASSERT_EQ('0', c[1]);
 	ASSERT_EQ('0', c[2]);

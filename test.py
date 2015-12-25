@@ -10,27 +10,30 @@ def check_echo(msg, exp_res):
 
     s.send(msg)
     
-    res = s.recv(len(msg))
+    res = s.recv(len(exp_res))
+    print(res)
     assert exp_res == res
 
 if __name__ == "__main__":
 	port = sys.argv[1]
 	mc = subprocess.Popen(['./server', port])
 
-	mcg = "get abc"
-	exp_res = "Forget your troubles 1 8\r\n Be happy\r\n"
-	check_echo(mcg, exp_res)
+	#mcg = "get abc\r\n"
+	#exp_res = "NOT_FOUND"
+	#check_echo(mcg, exp_res)
 
-	mcg = "set abc 1 1445128601 5"
-	exp_res = "SORTED"
+	mcg = "set abc 1 1\r\n5\r\n"
+	exp_res = "STORED"
 	check_echo(mcg, exp_res)
+	print(1)
 
-	mcg = "add abc 1 1445128601 5"
-	exp_res = "SORTED"
+	mcg = "get abc\r\n"
+	exp_res = "VALUE abc 0 1\r\n5\r\n"
 	check_echo(mcg, exp_res)
+	print(3)
 
-	mcg = "delete abc"
-	exp_res = "SORTED"
+	mcg = "delete abc\r\n"
+	exp_res = "DELETED"
 	check_echo(mcg, exp_res)
 
 	mc.kill()

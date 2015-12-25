@@ -5,8 +5,12 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <thread>
 #include "socketbuffer.h"
 #include "protocol.h"
+#include "cache.h"
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 class Server {
  public:
@@ -51,15 +55,22 @@ class Server {
     	struct sockaddr_storage conn_addr;
 		socklen_t addr_size = sizeof(conn_addr);
 		
+		std::vector<std::thread> threads;
 		while (true) {
 			int conn_fd = accept(sockfd, (struct sockaddr *)&conn_addr, &addr_size);
 			if (conn_fd == -1) {
 				fprintf(stderr, "accept error%d\n", errno);
 				exit(1);
 			}
-			ProcessConnection(conn_fd);
+
+			//threads.push_back(std::thread([conn_fd, this]() {
+        		/*this->*/ProcessConnection(conn_fd);
+    		//}));
 		}
 
+		/*for (auto& t : threads) {
+    		t.join();
+		}*/
 		freeaddrinfo(servinfo);
 	}
 
@@ -79,38 +90,69 @@ class McServer : public Server {
 void McServer::ProcessConnection(int fd) {
 	SocketRBuffer srb(fd, 4096);
 	SocketWBuffer swb(fd, 4096);
+	Cache<std::string, std::vector<char>> cache(4096);
 
-	McCommand cmd;
-	cmd.Deserialize(&srb);
+	while(!srb.Closed()) {
+		//pthread_mutex_lock(&mutex);
+		McCommand cmd;
+		cmd.Deserialize(&srb);
+		//pthread_mutex_unlock(&mutex);
+		if (cmd.command == CMD_GET) {
+			for (std::string key : cmd.keys) {
+				std::cout << key;
 
-	if (cmd.command == CMD_GET) {
-		std::string key("Forget your troubles");
-		int flags = 1;
-		const std::vector<char> data_block({'B', 'e', ' ', 'h', 'a', 'p', 'p', 'y'});
-		McValue mv(key, flags, data_block);
+				std::vector<char> value;
+				time_t exp_time;
+				time_t update_time;
 
-		std::vector<McValue> vmv(1, mv);
-		McResult mr(vmv);
-		mr.Serialize(&swb);
-		std::cout << "Get DONE\n";
+				bool flag = cache.get(key, &value, &exp_time, &update_time);
+
+				if (flag) {
+					std::vector<McValue> out;
+					out.emplace_back(key, cmd.flags, value);
+					McResult mr(out);
+					mr.Serialize(&swb);
+				} else {
+					McResult mr(R_NOT_FOUND);
+					mr.Serialize(&swb);
+				}
+			}
+		}
+
+		if (cmd.command == CMD_ADD) {
+			for (std::string key : cmd.keys) {
+				cache.set(key, cmd.exp_time, cmd.data);
+			}
+			McResult mr(R_STORED);
+			mr.Serialize(&swb);
+		}
+
+		if (cmd.command == CMD_SET) {
+			std::cout << "set1\n";
+			for (std::string key : cmd.keys) {
+				cache.set(key, cmd.exp_time, cmd.data);
+			}
+			std::cout << "set2\n";
+			McResult mr(R_STORED);
+			std::cout << "set3\n";
+			mr.Serialize(&swb);
+			std::cout << "set4\n";
+		}
+
+		if (cmd.command == CMD_DELETE) {
+			for (auto key : cmd.keys) {
+				bool flag = cache.remove(key);
+				if (flag) {
+					McResult mr(R_DELETED);
+					mr.Serialize(&swb);
+				} else {
+					McResult mr(R_NOT_FOUND);
+					mr.Serialize(&swb);				
+				}
+			}
+		}
+		swb.Flush();
 	}
-
-	if (cmd.command == CMD_ADD) {
-		McResult mr(R_STORED);
-		mr.Serialize(&swb);
-	}
-
-	if (cmd.command == CMD_SET) {
-		McResult mr(R_STORED);
-		mr.Serialize(&swb);
-	}
-
-	if (cmd.command == CMD_DELETE) {
-		McResult mr(R_STORED);
-		mr.Serialize(&swb);
-	}
-
-	swb.Flush();
 }
 
 int main(int argc, char const *argv[]) {
