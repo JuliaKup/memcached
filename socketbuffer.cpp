@@ -4,38 +4,39 @@
 #include <iostream>
 #include <unistd.h>
 
-SocketRBuffer::SocketRBuffer(int fd_value, size_t buffer_size_value):
-	RBuffer(buffer_size_value), fd(fd_value) {
-		buffer_size = buffer_size_value;
-        pos_ = 0;
-        end_ = 0;
-	}
-
+SocketRBuffer::SocketRBuffer(int fd_value, size_t buffer_size_value)
+        : RBuffer(buffer_size_value)
+        , fd(fd_value)
+        , closed_(false) {
+    ReadMore();
+}
 
 void SocketRBuffer::ReadMore() {
-	buffer_.clear();
+    pos_ = 0;
+    char* data = buffer_.data();
 
-	pos_ = 0;
+    int rd = read(fd, data, buffer_.size());
+    end_ = rd;
 
-	char buf[buffer_size];
-	int read_bytes = read(fd, buf, sizeof(buf));
-	int to_read = std::min(read_bytes, (int) buffer_.size());
+    if (rd == 0) {
+        close(fd);
+        closed_ = true;
+        //throw std::runtime_error("Failed to read more from SocketRBuffer");
+    }
+}
 
-	end_ = to_read;
-
-	while (to_read > 0 && read_bytes) {
-	    buffer_.insert(buffer_.end(), buf, buf + read_bytes);
-	    to_read -= read_bytes;
-	    read_bytes = read(fd, buf, sizeof(buf));
-	}
-	buffer_.insert(buffer_.end(), buf, buf + read_bytes);
+SocketRBuffer::~SocketRBuffer() {
+    if (!closed_) {
+        close(fd);
+        closed_ = true;
+    }
 }
 
 char SocketRBuffer::ReadChar() {
-	if (pos_ == end_) {
-		ReadMore();
-	}
-	return buffer_[pos_++];
+    if (pos_ == end_) {
+        ReadMore();
+    }
+    return buffer_[pos_++];
 }
 
 void SocketRBuffer::ReadCharCheck(char check) {
@@ -77,17 +78,18 @@ std::vector<char> SocketRBuffer::ReadBytes(size_t bytes_num) {
 }
 
 SocketWBuffer::SocketWBuffer(int fd_value, size_t buffer_size):
-	WBuffer(buffer_size), fd(fd_value) {}
+    WBuffer(buffer_size), fd(fd_value) {}
 
 void SocketWBuffer::Flush() {
-	int write_bytes;
-	char* data = buffer_.data();
-	int bytes_to_write = buffer_.size();
-	pos_ = 0;
-	while ((bytes_to_write > 0) && (write_bytes = write(fd, data, bytes_to_write)) > 0) {
-	    data += write_bytes;
-	    bytes_to_write -= write_bytes;
-	}
+    int write_bytes;
+    char* data = buffer_.data();
+    int bytes_to_write = buffer_.size();
+    pos_ = 0;
+    while ((bytes_to_write > 0) && (write_bytes = write(fd, data, bytes_to_write)) > 0) {
+        data += write_bytes;
+        bytes_to_write -= write_bytes;
+        if (write_bytes == 0) throw std::runtime_error("Socket has closed");
+    }
 }
 
 void SocketWBuffer::WriteChar(char ch) {
@@ -98,7 +100,7 @@ void SocketWBuffer::WriteChar(char ch) {
 }
 
 void SocketWBuffer::WriteUint32(uint32_t v) {
-    char buf[32];
+    char buf[35];
     int chw;
     snprintf(buf, 32, "%u%n", v, &chw);
     for (int i = 0; i < chw; ++i) {
@@ -120,5 +122,12 @@ void SocketWBuffer::WriteField(std::string field, char sep) {
 void SocketWBuffer::WriteBytes(const std::vector<char>& buffer) {
     for (char c : buffer) {
         WriteChar(c);
+    }
+}
+
+SocketWBuffer::~SocketWBuffer() {
+    if (!closed_) {
+        close(fd);
+        closed_ = true;
     }
 }

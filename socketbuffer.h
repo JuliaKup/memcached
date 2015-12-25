@@ -10,9 +10,13 @@ class SocketRBuffer : public RBuffer {
  	uint32_t ReadUint32();
  	std::string ReadField(char sep);
  	std::vector<char> ReadBytes(size_t bytes_num);
+ 	~SocketRBuffer();
+ 	bool Closed() const { return closed_; }
+    void Clear() { pos_ = 0; end_ = 0; }
  protected:
  	int fd;
  	int buffer_size;
+ 	bool closed_;
 };
 
 class SocketWBuffer : public WBuffer {
@@ -25,7 +29,11 @@ class SocketWBuffer : public WBuffer {
  	void WriteField(std::string field);
  	void WriteField(std::string field, char sep);
  	void WriteBytes(const std::vector<char>& buffer);
+ 	~SocketWBuffer();
+    bool Closed() const { return closed_; }
+    void Clear() { pos_ = 0; }
  protected:
  	int fd;
+ 	bool closed_;
 };
 
