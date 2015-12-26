@@ -63,14 +63,14 @@ class Server {
 				exit(1);
 			}
 
-			//threads.push_back(std::thread([conn_fd, this]() {
-        		/*this->*/ProcessConnection(conn_fd);
-    		//}));
+			threads.push_back(std::thread([conn_fd, this]() {
+        		ProcessConnection(conn_fd);
+    		}));
 		}
 
-		/*for (auto& t : threads) {
+		for (auto& t : threads) {
     		t.join();
-		}*/
+		}
 		freeaddrinfo(servinfo);
 	}
 
@@ -89,31 +89,29 @@ class McServer : public Server {
 
 void McServer::ProcessConnection(int fd) {
 	SocketRBuffer srb(fd, 4096);
-	SocketWBuffer swb(fd, 4096);
 	Cache<std::string, std::vector<char>> cache(4096);
 
 	while(!srb.Closed()) {
+		SocketWBuffer swb(fd, 4096);
 		//pthread_mutex_lock(&mutex);
 		McCommand cmd;
 		cmd.Deserialize(&srb);
+		cache.clean();
 		//pthread_mutex_unlock(&mutex);
 		if (cmd.command == CMD_GET) {
+			std::vector<McValue> out;
 			for (std::string key : cmd.keys) {
-				std::cout << key;
 
 				std::vector<char> value;
 				time_t exp_time;
 				time_t update_time;
+				uint32_t flags;
 
-				bool flag = cache.get(key, &value, &exp_time, &update_time);
+				bool flag = cache.get(key, &value, &exp_time, &update_time, &flags);
 
 				if (flag) {
-					std::vector<McValue> out;
-					out.emplace_back(key, cmd.flags, value);
+					out.emplace_back(key, flags, value);
 					McResult mr(out);
-					mr.Serialize(&swb);
-				} else {
-					McResult mr(R_NOT_FOUND);
 					mr.Serialize(&swb);
 				}
 			}
@@ -121,22 +119,18 @@ void McServer::ProcessConnection(int fd) {
 
 		if (cmd.command == CMD_ADD) {
 			for (std::string key : cmd.keys) {
-				cache.set(key, cmd.exp_time, cmd.data);
+				cache.set(key, cmd.flags, cmd.exp_time, cmd.data);
 			}
 			McResult mr(R_STORED);
 			mr.Serialize(&swb);
 		}
 
 		if (cmd.command == CMD_SET) {
-			std::cout << "set1\n";
 			for (std::string key : cmd.keys) {
-				cache.set(key, cmd.exp_time, cmd.data);
+				cache.set(key, cmd.flags, cmd.exp_time, cmd.data);
 			}
-			std::cout << "set2\n";
 			McResult mr(R_STORED);
-			std::cout << "set3\n";
 			mr.Serialize(&swb);
-			std::cout << "set4\n";
 		}
 
 		if (cmd.command == CMD_DELETE) {
