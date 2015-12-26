@@ -81,15 +81,12 @@ SocketWBuffer::SocketWBuffer(int fd_value, size_t buffer_size):
     WBuffer(buffer_size), fd(fd_value) {}
 
 void SocketWBuffer::Flush() {
-    int to_write = pos_;
-    int write_bytes = 0;
+    int write_bytes;
     char* data = buffer_.data();
-
-    while (write_bytes < to_write && !closed_) {
-        int wr = write(fd, data, to_write);
-        data += wr;
-        write_bytes += wr;
-        to_write -= wr;
+    int bytes_to_write = pos_;
+    while ((bytes_to_write > 0) && (write_bytes = write(fd, data, bytes_to_write)) > 0) {
+        data += write_bytes;
+        bytes_to_write -= write_bytes;
     }
 
     if (write_bytes == 0 && pos_) {

@@ -62,15 +62,8 @@ class Server {
 				fprintf(stderr, "accept error%d\n", errno);
 				exit(1);
 			}
-
-			//threads.push_back(std::thread([conn_fd, this]() {
-        		ProcessConnection(conn_fd);
-    		//}));
+        	ProcessConnection(conn_fd);
 		}
-
-		//for (auto& t : threads) {
-    		//t.join();
-		//}
 		freeaddrinfo(servinfo);
 	}
 
@@ -113,12 +106,11 @@ void McServer::ProcessConnection(int fd) {
 				if (flag) {
 
 					out.emplace_back(key, flags, value);
-					McResult mr(out);
-					mr.Serialize(&swb);
 
 				}
 			}
-
+			McResult mr(out);
+			mr.Serialize(&swb);
 		}
 
 		if (cmd.command == CMD_ADD) {
@@ -167,9 +159,7 @@ void McServer::ProcessConnection(int fd) {
 			}
 
 		}
-
 		swb.Flush();
-
 	}
 }
 
