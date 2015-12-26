@@ -72,7 +72,6 @@ class Cache {
  		exp_times.erase(key);
  		update_times.erase(key);
  		flags.erase(key);
-
  		return true;
  	}
 
