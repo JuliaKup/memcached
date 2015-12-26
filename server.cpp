@@ -63,14 +63,14 @@ class Server {
 				exit(1);
 			}
 
-			threads.push_back(std::thread([conn_fd, this]() {
+			//threads.push_back(std::thread([conn_fd, this]() {
         		ProcessConnection(conn_fd);
-    		}));
+    		//}));
 		}
 
-		for (auto& t : threads) {
-    		t.join();
-		}
+		//for (auto& t : threads) {
+    		//t.join();
+		//}
 		freeaddrinfo(servinfo);
 	}
 
@@ -83,22 +83,24 @@ class Server {
 
 class McServer : public Server {
  public:
- 	McServer(const char* port): Server(port) {}
+ 	McServer(const char* port): Server(port), cache(4096) {}
  	void ProcessConnection(int fd) override;
+ protected:
+ 	Cache<std::string, std::vector<char>> cache;
 };
 
 void McServer::ProcessConnection(int fd) {
 	SocketRBuffer srb(fd, 4096);
-	Cache<std::string, std::vector<char>> cache(4096);
+	SocketWBuffer swb(fd, 4096);
 
 	while(!srb.Closed()) {
-		SocketWBuffer swb(fd, 4096);
-		//pthread_mutex_lock(&mutex);
+
 		McCommand cmd;
 		cmd.Deserialize(&srb);
 		cache.clean();
-		//pthread_mutex_unlock(&mutex);
+
 		if (cmd.command == CMD_GET) {
+
 			std::vector<McValue> out;
 			for (std::string key : cmd.keys) {
 
@@ -108,44 +110,66 @@ void McServer::ProcessConnection(int fd) {
 				uint32_t flags;
 
 				bool flag = cache.get(key, &value, &exp_time, &update_time, &flags);
-
 				if (flag) {
+
 					out.emplace_back(key, flags, value);
 					McResult mr(out);
 					mr.Serialize(&swb);
+
 				}
 			}
+
 		}
 
 		if (cmd.command == CMD_ADD) {
+
 			for (std::string key : cmd.keys) {
+
 				cache.set(key, cmd.flags, cmd.exp_time, cmd.data);
+
 			}
+
 			McResult mr(R_STORED);
 			mr.Serialize(&swb);
+
 		}
 
 		if (cmd.command == CMD_SET) {
+
 			for (std::string key : cmd.keys) {
+
 				cache.set(key, cmd.flags, cmd.exp_time, cmd.data);
+
 			}
+
 			McResult mr(R_STORED);
 			mr.Serialize(&swb);
+
 		}
 
 		if (cmd.command == CMD_DELETE) {
+
 			for (auto key : cmd.keys) {
+				
 				bool flag = cache.remove(key);
+
 				if (flag) {
+
 					McResult mr(R_DELETED);
 					mr.Serialize(&swb);
+
 				} else {
+
 					McResult mr(R_NOT_FOUND);
-					mr.Serialize(&swb);				
+					mr.Serialize(&swb);	
+		
 				}
 			}
+
 		}
+
 		swb.Flush();
+
 	}
 }
 

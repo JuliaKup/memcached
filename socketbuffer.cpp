@@ -81,15 +81,23 @@ SocketWBuffer::SocketWBuffer(int fd_value, size_t buffer_size):
     WBuffer(buffer_size), fd(fd_value) {}
 
 void SocketWBuffer::Flush() {
-    int write_bytes;
+    int to_write = pos_;
+    int write_bytes = 0;
     char* data = buffer_.data();
-    int bytes_to_write = buffer_.size();
-    pos_ = 0;
-    while ((bytes_to_write > 0) && (write_bytes = write(fd, data, bytes_to_write)) > 0) {
-        data += write_bytes;
-        bytes_to_write -= write_bytes;
-        if (write_bytes == 0) throw std::runtime_error("Socket has closed");
+
+    while (write_bytes < to_write && !closed_) {
+        int wr = write(fd, data, to_write);
+        data += wr;
+        write_bytes += wr;
+        to_write -= wr;
     }
+
+    if (write_bytes == 0 && pos_) {
+        close(fd);
+        closed_ = true;
+        throw std::runtime_error("Failed to write more to SocketWBuffer");
+    }
+    pos_ = 0;
 }
 
 void SocketWBuffer::WriteChar(char ch) {
