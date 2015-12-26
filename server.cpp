@@ -6,6 +6,8 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <thread>
+#include <poll.h>
+#include <atomic>
 #include "socketbuffer.h"
 #include "protocol.h"
 #include "cache.h"
@@ -54,24 +56,38 @@ class Server {
 
     	struct sockaddr_storage conn_addr;
 		socklen_t addr_size = sizeof(conn_addr);
-		
-		std::vector<std::thread> threads;
-		while (true) {
-			int conn_fd = accept(sockfd, (struct sockaddr *)&conn_addr, &addr_size);
-			if (conn_fd == -1) {
-				fprintf(stderr, "accept error%d\n", errno);
-				exit(1);
+
+		struct pollfd fds[1];
+		fds[0].fd = sockfd;
+		int timeout_msecs = 5000;
+		fds[0].events = POLLIN | POLLPRI;
+		while (!stopped_) {
+			int res = poll(fds, 1, timeout_msecs);
+			if (res > 0) {
+				int conn_fd = accept(sockfd, (struct sockaddr *)&conn_addr, &addr_size);
+				if (conn_fd == -1) {
+					fprintf(stderr, "accept error%d\n", errno);
+					exit(1);
+				}
+				ProcessConnection(conn_fd);
+			} else {
+				stop();
 			}
-        	ProcessConnection(conn_fd);
 		}
 		freeaddrinfo(servinfo);
 	}
 
 
 	virtual void ProcessConnection(int fd) = 0;
+
+	void stop() {
+		stopped_ = true;
+	}
+
  protected:
  	int sockfd;
  	struct addrinfo *servinfo;
+ 	std::atomic<bool> stopped_;
 };
 
 class McServer : public Server {
